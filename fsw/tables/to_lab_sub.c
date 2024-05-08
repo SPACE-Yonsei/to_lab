@@ -53,8 +53,8 @@
 #endif
 
 TO_LAB_Subs_t TO_LAB_Subs = {.Subs = {/* CFS App Subscriptions */
-                                      {CFE_SB_MSGID_WRAP_VALUE(TO_LAB_HK_TLM_MID), {0, 0}, 4},
-                                      {CFE_SB_MSGID_WRAP_VALUE(TO_LAB_DATA_TYPES_MID), {0, 0}, 4},
+                                      {CFE_SB_MSGID_WRAP_VALUE(TO_LAB_MID_HOUSEKEEPING_RES), {0, 0}, 4},
+                                      {CFE_SB_MSGID_WRAP_VALUE(TO_LAB_MID_DATA_TYPES_RES), {0, 0}, 4},
                                       {CFE_SB_MSGID_WRAP_VALUE(CI_LAB_HK_TLM_MID), {0, 0}, 4},
                                       
 

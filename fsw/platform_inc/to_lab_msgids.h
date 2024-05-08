@@ -29,11 +29,11 @@
 #ifndef _to_lab_msgids_h_
 #define _to_lab_msgids_h_
 
-#define TO_LAB_CMD_MID     0x1880
-#define TO_LAB_SEND_HK_MID 0x1881
+#define TO_LAB_MID_HOUSEKEEPING_REQ 0x1840
+#define TO_LAB_MID_GROUNDCMD_REQ  0x1841
 
-#define TO_LAB_HK_TLM_MID     0x0880
-#define TO_LAB_DATA_TYPES_MID 0x0881
+#define TO_LAB_MID_HOUSEKEEPING_RES  0x0840
+#define TO_LAB_MID_DATA_TYPES_RES 0x0841
 
 #endif /* _to_lab_msgids_h_ */
 

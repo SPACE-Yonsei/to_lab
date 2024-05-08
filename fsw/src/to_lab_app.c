@@ -165,7 +165,7 @@ int32 TO_LAB_init(void)
     /*
     ** Initialize housekeeping packet (clear user data area)...
     */
-    CFE_MSG_Init(&TO_LAB_Global.HkTlm.TlmHeader.Msg, TO_LAB_HK_TLM_MID, sizeof(TO_LAB_Global.HkTlm));
+    CFE_MSG_Init(&TO_LAB_Global.HkTlm.TlmHeader.Msg, TO_LAB_MID_HOUSEKEEPING_RES, sizeof(TO_LAB_Global.HkTlm));
 
     status = CFE_TBL_Register(&TO_SubTblHandle, "TO_LAB_Subs", sizeof(*TO_LAB_Subs), CFE_TBL_OPT_DEFAULT, NULL);
 
@@ -198,8 +198,8 @@ int32 TO_LAB_init(void)
     status = CFE_SB_CreatePipe(&TO_LAB_Global.Cmd_pipe, PipeDepth, PipeName);
     if (status == CFE_SUCCESS)
     {
-        CFE_SB_Subscribe(TO_LAB_CMD_MID, TO_LAB_Global.Cmd_pipe);
-        CFE_SB_Subscribe(TO_LAB_SEND_HK_MID, TO_LAB_Global.Cmd_pipe);
+        CFE_SB_Subscribe(TO_LAB_MID_GROUNDCMD_REQ, TO_LAB_Global.Cmd_pipe);
+        CFE_SB_Subscribe(TO_LAB_MID_HOUSEKEEPING_REQ, TO_LAB_Global.Cmd_pipe);
     }
     else
         CFE_EVS_SendEvent(TO_CRCMDPIPE_ERR_EID, CFE_EVS_EventType_ERROR, "L%d TO Can't create cmd pipe status %i",
@@ -290,11 +290,11 @@ void TO_LAB_process_commands(void)
                 /* For SB return statuses that imply a message: process it. */
                 switch (CFE_SB_MsgIdToValue(MsgId))
                 {
-                    case TO_LAB_CMD_MID:
+                    case TO_LAB_MID_GROUNDCMD_REQ:
                         TO_LAB_exec_local_command(SBBufPtr);
                         break;
 
-                    case TO_LAB_SEND_HK_MID:
+                    case TO_LAB_MID_HOUSEKEEPING_REQ:
                         TO_LAB_SendHousekeeping((const CFE_MSG_CommandHeader_t *)SBBufPtr);
                         break;
 
@@ -395,7 +395,7 @@ int32 TO_LAB_SendDataTypes(const TO_LAB_SendDataTypesCmd_t *data)
     char  string_variable[10] = "ABCDEFGHIJ";
 
     /* initialize data types packet */
-    CFE_MSG_Init(&TO_LAB_Global.DataTypesTlm.TlmHeader.Msg, TO_LAB_DATA_TYPES_MID, sizeof(TO_LAB_Global.DataTypesTlm));
+    CFE_MSG_Init(&TO_LAB_Global.DataTypesTlm.TlmHeader.Msg, TO_LAB_MID_DATA_TYPES_RES, sizeof(TO_LAB_Global.DataTypesTlm));
 
     CFE_SB_TimeStampMsg(&TO_LAB_Global.DataTypesTlm.TlmHeader.Msg);
 
