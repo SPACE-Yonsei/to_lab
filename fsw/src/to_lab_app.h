@@ -47,7 +47,7 @@
 /**
  * Depth of pipe for commands to the TO_LAB application itself
  */
-#define TO_LAB_CMD_PIPE_DEPTH 8
+#define TO_LAB_CMD_PIPE_DEPTH 16
 
 /**
  * Depth of pipe for telemetry forwarded through the TO_LAB application

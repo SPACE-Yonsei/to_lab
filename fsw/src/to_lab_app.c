@@ -35,6 +35,10 @@
 #include "to_lab_version.h"
 #include "to_lab_sub_table.h"
 
+#include "hk_msgids.h"
+
+#include "libs/spacey.h"
+
 /*
 ** Global Data Section
 */
@@ -84,6 +88,44 @@ int32 TO_LAB_RemovePacket(const TO_LAB_RemovePacketCmd_t *data);
 int32 TO_LAB_ResetCounters(const TO_LAB_ResetCountersCmd_t *data);
 int32 TO_LAB_SendDataTypes(const TO_LAB_SendDataTypesCmd_t *data);
 int32 TO_LAB_SendHousekeeping(const CFE_MSG_CommandHeader_t *data);
+
+int32 TO_LAB_PROCESS_FWD_TLM_DATA(HK_COMBINED_TLM_PCK_t *data);
+
+int32 TO_LAB_PROCESS_FWD_TLM_DATA(HK_COMBINED_TLM_PCK_t *data){
+    printf("%4d, %s, %6d, %c, %s \n %6.1f \n %2d \n %c, %c \n %4.1f, %5.1f \n %4.1f \n %ld, %6.1f, %7.4f, %7.4f, %2d \n %5.2f, %5.2f, %4.1f \n %s",
+    data->logic_app_data.team_id,
+    data->logic_app_data.mission_time,
+    data->logic_app_data.packet_count,
+    data->logic_app_data.mode,
+    data->logic_app_data.state,
+
+    data->imu_app_data.Barometer.altitude,
+
+    data->as_app_data.air_speed,
+
+    data->logic_app_data.hs_deployed,
+    data->logic_app_data.pc_deployed,
+
+    data->imu_app_data.Barometer.temperature,
+    data->imu_app_data.Barometer.pressure,
+
+    data->vol_app_data.voltage,
+
+    data->gps_app_data.gpstime,
+    data->gps_app_data.altitude,
+    data->gps_app_data.latitude,
+    data->gps_app_data.longitude,
+    data->gps_app_data.satcount,
+
+    data->imu_app_data.Magnetometer.x,
+    data->imu_app_data.Magnetometer.y,
+    data->imu_app_data.Magnetometer.z,
+
+    data->ci_lab_data.echo
+    );
+
+    return CFE_SUCCESS;
+}
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                   */
@@ -241,6 +283,15 @@ int32 TO_LAB_init(void)
     CFE_EVS_SendEvent(TO_INIT_INF_EID, CFE_EVS_EventType_INFORMATION, "TO Lab Initialized.%s, Awaiting enable command.",
                       TO_LAB_VERSION_STRING);
 
+    // USER DEFINED INITIALIZATION
+    
+    // Subscribe to HK_MID_FORWARD_TLM_DATA_RES
+    status = CFE_SB_Subscribe(HK_MID_FORWARD_TLM_DATA_RES, TO_LAB_Global.Cmd_pipe);
+    if (status != CFE_SUCCESS)
+    {
+        CFE_EVS_SendEvent(TO_TLMPIPE_ERR_EID, CFE_EVS_EventType_ERROR, "L%d TO Can't create Tlm pipe status %i",
+                          __LINE__, (int)status);
+    }
     return CFE_SUCCESS;
 }
 
@@ -286,7 +337,6 @@ void TO_LAB_process_commands(void)
             case CFE_SUCCESS:
 
                 CFE_MSG_GetMsgId(&SBBufPtr->Msg, &MsgId);
-
                 /* For SB return statuses that imply a message: process it. */
                 switch (CFE_SB_MsgIdToValue(MsgId))
                 {
@@ -296,6 +346,9 @@ void TO_LAB_process_commands(void)
 
                     case TO_LAB_MID_HOUSEKEEPING_REQ:
                         TO_LAB_SendHousekeeping((const CFE_MSG_CommandHeader_t *)SBBufPtr);
+                        break;
+                    case HK_MID_FORWARD_TLM_DATA_RES:
+                        TO_LAB_PROCESS_FWD_TLM_DATA((HK_COMBINED_TLM_PCK_t *)SBBufPtr);
                         break;
 
                     default:
