@@ -50,6 +50,7 @@ typedef struct
     bool            downlink_on;
     char            tlm_dest_IP[17];
     bool            suppress_sendto;
+    int32           packetcount;
 
     TO_LAB_HkTlm_t        HkTlm;
     TO_LAB_DataTypesTlm_t DataTypesTlm;
@@ -90,9 +91,29 @@ int32 TO_LAB_SendDataTypes(const TO_LAB_SendDataTypesCmd_t *data);
 int32 TO_LAB_SendHousekeeping(const CFE_MSG_CommandHeader_t *data);
 
 int32 TO_LAB_PROCESS_FWD_TLM_DATA(HK_COMBINED_TLM_PCK_t *data);
+int32 TO_LAB_TELEMETRY_ONOFF(TO_LAB_CMD_TELEMETRY_ONOFF_CMD_t *data);
+
+
+int32 TO_LAB_TELEMETRY_ONOFF(TO_LAB_CMD_TELEMETRY_ONOFF_CMD_t *data)
+{
+    if (data->Payload.onoff == 1){
+        CFE_EVS_SendEvent(TO_TLMOUTENA_INF_EID, CFE_EVS_EventType_INFORMATION, "TO telemetry output enabled");
+        TO_LAB_Global.downlink_on = true;
+    }
+    else if(data->Payload.onoff == 0){
+        CFE_EVS_SendEvent(TO_TLMOUTSTOP_ERR_EID, CFE_EVS_EventType_INFORMATION, "TO telemetry output disabled");
+        TO_LAB_Global.downlink_on = false;
+    }
+    else{
+        CFE_EVS_SendEvent(TO_TLMOUTSOCKET_ERR_EID, CFE_EVS_EventType_ERROR, "TO telemetry output enable command error, expected 1 or 0 but received %d", data->Payload.onoff);
+    }
+    return CFE_SUCCESS;
+}
 
 int32 TO_LAB_PROCESS_FWD_TLM_DATA(HK_COMBINED_TLM_PCK_t *data){
-    printf("%4d, %s, %6d, %c, %s \n %6.1f \n %2d \n %c, %c \n %4.1f, %5.1f \n %4.1f \n %ld, %6.1f, %7.4f, %7.4f, %2d \n %5.2f, %5.2f, %4.1f \n %s",
+
+    /*
+    printf("logic : %04d, %s, %06d, %c, %s, %06.1f \n as : %02d \n hc pc :%c, %c \n temp pres :  %04.1f, %05.1f \n vol : %04.1f \n gps : %0ld, %06.1f, %07.4f, %07.4f, %02d \n mag : %05.2f, %05.2f, %04.1f \n echo : %s",
     data->logic_app_data.team_id,
     data->logic_app_data.mission_time,
     data->logic_app_data.packet_count,
@@ -123,6 +144,55 @@ int32 TO_LAB_PROCESS_FWD_TLM_DATA(HK_COMBINED_TLM_PCK_t *data){
 
     data->ci_lab_data.echo
     );
+    */
+
+    char tempbuf[300];
+    char timebuf[9];
+    getCurrentTime(timebuf, sizeof(timebuf));
+
+    snprintf(tempbuf, sizeof(tempbuf), "/*%04d,%s,%06d,%c,%s,%06.1f,%02d,%c,%c,%04.1f,%05.1f,%04.1f,%ld,%06.1f,%07.4f,%07.4f,%02d,%05.2f,%05.2f,%04.1f,%s*/\n",
+    data->logic_app_data.team_id,
+    timebuf,
+    TO_LAB_Global.packetcount++,
+    data->logic_app_data.mode,
+    data->logic_app_data.state,
+
+    data->imu_app_data.Barometer.altitude,
+
+    data->as_app_data.air_speed,
+
+    data->logic_app_data.hs_deployed,
+    data->logic_app_data.pc_deployed,
+
+    data->imu_app_data.Barometer.temperature,
+    data->imu_app_data.Barometer.pressure,
+
+    data->vol_app_data.voltage,
+
+    data->gps_app_data.gpstime,
+    data->gps_app_data.altitude,
+    data->gps_app_data.latitude,
+    data->gps_app_data.longitude,
+    data->gps_app_data.satcount,
+
+    data->imu_app_data.Magnetometer.x,
+    data->imu_app_data.Magnetometer.y,
+    data->imu_app_data.Magnetometer.z,
+
+    data->ci_lab_data.echo
+    );
+
+    char *sendbuf = malloc(strlen(tempbuf) + 1); // Allocate memory for the buffer
+    if (sendbuf != NULL) {
+        strncpy(sendbuf, tempbuf, strlen(tempbuf));
+        //printf("length of tempbuf : %ld\n", strlen(tempbuf));
+        //printf("length of sendbuf : %ld\n", strlen(sendbuf)); // Use strlen instead of sizeof to get the actual length of the string
+        if(TO_LAB_Global.downlink_on == true){
+            SPACEY_LIB_UART_SEND_DATA(sendbuf, strlen(sendbuf)); // Use strlen instead of sizeof to send the correct length of data
+        }
+    }
+
+    free(sendbuf); // Free the allocated memory
 
     return CFE_SUCCESS;
 }
@@ -292,6 +362,9 @@ int32 TO_LAB_init(void)
         CFE_EVS_SendEvent(TO_TLMPIPE_ERR_EID, CFE_EVS_EventType_ERROR, "L%d TO Can't create Tlm pipe status %i",
                           __LINE__, (int)status);
     }
+
+    TO_LAB_Global.downlink_on = true;
+    TO_LAB_Global.packetcount = 0;
     return CFE_SUCCESS;
 }
 
@@ -404,7 +477,10 @@ void TO_LAB_exec_local_command(CFE_SB_Buffer_t *SBBufPtr)
         case TO_OUTPUT_ENABLE_CC:
             TO_LAB_EnableOutput((const TO_LAB_EnableOutputCmd_t *)SBBufPtr);
             break;
-
+        // User Defined Data
+        case TO_ENABLE_TLM_CC:
+            TO_LAB_TELEMETRY_ONOFF((TO_LAB_CMD_TELEMETRY_ONOFF_CMD_t *)SBBufPtr);
+            break;
         default:
             CFE_EVS_SendEvent(TO_FNCODE_ERR_EID, CFE_EVS_EventType_ERROR,
                               "L%d TO: Invalid Function Code Rcvd In Ground Command 0x%x", __LINE__,

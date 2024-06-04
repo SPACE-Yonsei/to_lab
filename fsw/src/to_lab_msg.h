@@ -37,6 +37,10 @@
 #define TO_REMOVE_ALL_PKT_CC  5 /*  remove all packet */
 #define TO_OUTPUT_ENABLE_CC   6 /*  output enable     */
 
+// Commands aboce are not used.
+
+#define TO_ENABLE_TLM_CC     7 /*  enable telemetry  */
+
 /******************************************************************************/
 
 typedef struct
